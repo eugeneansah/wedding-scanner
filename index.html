@@ -1,35 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Wedding Check-In</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+    #reader { width: 300px; margin: auto; }
+    #result { margin-top: 20px; font-size: 1.2em; }
+    #counter { margin-top: 10px; font-weight: bold; }
+    input, button { font-size: 1em; padding: 8px; }
+  </style>
 </head>
-<body style="text-align:center;font-family:sans-serif;">
+<body>
 
 <h2>Wedding Check-In</h2>
 
-  <input type="password" id="pin" placeholder="Enter Staff PIN"/>
+<input type="password" id="pin" placeholder="Enter Staff PIN"/>
 <button id="startScanBtn">Start Scan</button>
-<br><br>
 
-<div id="reader" style="width:300px;margin:auto;"></div>
-
+<div id="reader" style="display:none;"></div>
 <h3 id="result"></h3>
+<div id="counter">Checked-In: 0</div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwvTX_qnDQuHJmixvag0SggUv0QuBrTkJukLXxgluy5XdGcrYSDIxXqhNJq35ncDj8/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwvTX_qnDQuHJmixvag0SggUv0QuBrTkJukLXxgluy5XdGcrYSDIxXqhNJq35ncDj8/exec"; // Replace with your Apps Script Web App
 const html5QrCode = new Html5Qrcode("reader");
 
+let checkedInCount = 0;
+
+// Function to handle scanned QR codes
 function onScanSuccess(decodedText) {
   const pin = document.getElementById("pin").value;
 
   fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify({
-      code: decodedText,
-      pin: pin
-    })
+    body: JSON.stringify({ code: decodedText, pin: pin })
   })
   .then(res => res.json())
   .then(data => {
@@ -37,34 +43,37 @@ function onScanSuccess(decodedText) {
 
     if (data.status === "success") {
       resultDiv.innerHTML = "✅ Welcome " + data.name;
+      checkedInCount++;
+      document.getElementById("counter").innerHTML = "Checked-In: " + checkedInCount;
     } else if (data.status === "duplicate") {
       resultDiv.innerHTML = "⚠ Already Checked-In";
     } else if (data.status === "unauthorized") {
-      resultDiv.innerHTML = "❌ Wrong PIN";
-      // Stop scanner if it was started
-      html5QrCode.stop().catch(err => console.log(err));
-      document.getElementById("pin").style.display = "block";
-      document.getElementById("startScanBtn").style.display = "block";
+      alert("❌ Wrong PIN");
+      stopScanner();
     } else {
       resultDiv.innerHTML = "❌ Invite Not Found";
     }
   });
 }
 
+// Stop scanner function
+function stopScanner() {
+  html5QrCode.stop().catch(err => console.log(err));
+  document.getElementById("pin").style.display = "block";
+  document.getElementById("startScanBtn").style.display = "block";
+  document.getElementById("reader").style.display = "none";
+}
+
+// Start scanner after PIN validation
 document.getElementById("startScanBtn").addEventListener("click", function() {
   const pin = document.getElementById("pin").value;
-  if (!pin) {
-    alert("Enter PIN first");
-    return;
-  }
 
-  // Validate PIN with backend first
+  if (!pin) { alert("Enter PIN first"); return; }
+
+  // Dummy fetch to validate PIN before camera
   fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify({
-      code: "PING_TEST", // dummy code to validate PIN
-      pin: pin
-    })
+    body: JSON.stringify({ code: "PING_TEST", pin: pin })
   })
   .then(res => res.json())
   .then(data => {
@@ -76,16 +85,19 @@ document.getElementById("startScanBtn").addEventListener("click", function() {
     // Correct PIN → start scanner
     document.getElementById("pin").style.display = "none";
     document.getElementById("startScanBtn").style.display = "none";
+    document.getElementById("reader").style.display = "block";
 
+    // Get cameras
     Html5Qrcode.getCameras().then(devices => {
       let backCam = devices.find(cam => cam.label.toLowerCase().includes("back")) || devices[0];
+
       html5QrCode.start(
         { deviceId: { exact: backCam.id } },
-        { fps: 10, qrbox: 300 },
+        { fps: 10, qrbox: 300, aspectRatio: 1.0 },
         onScanSuccess,
-        err => console.log(err)
+        errorMessage => { console.log("Scan error:", errorMessage); }
       );
-    }).catch(err => console.log(err));
+    }).catch(err => console.error("Camera init failed:", err));
   });
 });
 </script>
