@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Wedding Check-In</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body style="text-align:center;font-family:sans-serif;">
+
+<h2>Wedding Check-In</h2>
+
+<input type="password" id="pin" placeholder="Enter Staff PIN"/>
+<br><br>
+
+<div id="reader" style="width:300px;margin:auto;"></div>
+
+<h3 id="result"></h3>
+
+<script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycbwvTX_qnDQuHJmixvag0SggUv0QuBrTkJukLXxgluy5XdGcrYSDIxXqhNJq35ncDj8/exec";
+
+function onScanSuccess(decodedText) {
+
+  const pin = document.getElementById("pin").value;
+
+  if (!pin) {
+    alert("Enter PIN first");
+    return;
+  }
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      code: decodedText,
+      pin: pin
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+
+    if (data.status === "success") {
+      document.getElementById("result").innerHTML =
+        "✅ Welcome " + data.name;
+    }
+    else if (data.status === "duplicate") {
+      document.getElementById("result").innerHTML =
+        "⚠ Already Checked-In";
+    }
+    else if (data.status === "unauthorized") {
+      document.getElementById("result").innerHTML =
+        "❌ Wrong PIN";
+    }
+    else {
+      document.getElementById("result").innerHTML =
+        "❌ Invite Not Found";
+    }
+
+  });
+}
+
+const html5QrCode = new Html5Qrcode("reader");
+
+Html5Qrcode.getCameras().then(devices => {
+  if (devices.length) {
+    html5QrCode.start(
+      devices[0].id,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess
+    );
+  }
+});
+
+</script>
+
+</body>
+</html>
