@@ -11,6 +11,9 @@
 
 <input type="password" id="pin" placeholder="Enter Staff PIN"/>
 <br><br>
+  <input type="password" id="pin" placeholder="Enter Staff PIN"/>
+<button id="startScanBtn">Start Scan</button>
+<br><br>
 
 <div id="reader" style="width:300px;margin:auto;"></div>
 
@@ -69,6 +72,55 @@ Html5Qrcode.getCameras().then(devices => {
       onScanSuccess
     );
   }
+});
+
+  document.getElementById("startScanBtn").addEventListener("click", function() {
+  const pin = document.getElementById("pin").value;
+
+  if (!pin) {
+    alert("Enter PIN first");
+    return;
+  }
+
+  // Hide the PIN input and button after starting
+  document.getElementById("pin").style.display = "none";
+  document.getElementById("startScanBtn").style.display = "none";
+
+  // Start camera scanner
+  Html5Qrcode.getCameras().then(devices => {
+    if (devices.length) {
+      html5QrCode.start(
+        devices[0].id,
+        { fps: 10, qrbox: 250 },
+        decodedText => {
+
+          fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({
+              code: decodedText,
+              pin: pin
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            const resultDiv = document.getElementById("result");
+
+            if (data.status === "success") {
+              resultDiv.innerHTML = "✅ Welcome " + data.name;
+            } else if (data.status === "duplicate") {
+              resultDiv.innerHTML = "⚠ Already Checked-In";
+            } else if (data.status === "unauthorized") {
+              resultDiv.innerHTML = "❌ Wrong PIN";
+            } else {
+              resultDiv.innerHTML = "❌ Invite Not Found";
+            }
+
+          });
+
+        }
+      );
+    }
+  });
 });
 
 </script>
