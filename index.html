@@ -20,7 +20,7 @@
 <script>
 
 const API_URL = "https://script.google.com/macros/s/AKfycbwvTX_qnDQuHJmixvag0SggUv0QuBrTkJukLXxgluy5XdGcrYSDIxXqhNJq35ncDj8/exec";
-{ fps: 10, qrbox: 300, aspectRatio: 1.0 }
+
 function onScanSuccess(decodedText) {
    console.log("QR Detected:", decodedText);
   const pin = document.getElementById("pin").value;
@@ -51,6 +51,17 @@ function onScanSuccess(decodedText) {
     }
   });
 }
+    document.getElementById("startScanBtn").addEventListener("click", function() {
+  const pin = document.getElementById("pin").value;
+
+  if (!pin) {
+    alert("Enter PIN first");
+    return;
+  }
+document.getElementById("startScanBtn").addEventListener("click", function() {
+  // Hide PIN & button
+  document.getElementById("pin").style.display = "none";
+  document.getElementById("startScanBtn").style.display = "none";
 
 // Initialize scanner
 const html5QrCode = new Html5Qrcode("reader");
@@ -74,18 +85,12 @@ Html5Qrcode.getCameras().then(devices => {
   console.error(err);
   alert("Camera initialization failed: " + err);
 });
+html5QrCode.start(
+  { facingMode: { exact: "environment" } },
+  { fps: 10, qrbox: 300 },
+  onScanSuccess
+);
 
-  document.getElementById("startScanBtn").addEventListener("click", function() {
-  const pin = document.getElementById("pin").value;
-
-  if (!pin) {
-    alert("Enter PIN first");
-    return;
-  }
-document.getElementById("startScanBtn").addEventListener("click", function() {
-  // Hide PIN & button
-  document.getElementById("pin").style.display = "none";
-  document.getElementById("startScanBtn").style.display = "none";
 
   // Start scanning
   startScanner();
