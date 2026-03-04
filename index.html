@@ -22,9 +22,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwvTX_qnDQuHJmixvag0SggUv0QuBrTkJukLXxgluy5XdGcrYSDIxXqhNJq35ncDj8/exec";
 
 function onScanSuccess(decodedText) {
-
   const pin = document.getElementById("pin").value;
-
   if (!pin) {
     alert("Enter PIN first");
     return;
@@ -39,37 +37,41 @@ function onScanSuccess(decodedText) {
   })
   .then(res => res.json())
   .then(data => {
+    const resultDiv = document.getElementById("result");
 
     if (data.status === "success") {
-      document.getElementById("result").innerHTML =
-        "✅ Welcome " + data.name;
+      resultDiv.innerHTML = "✅ Welcome " + data.name;
+    } else if (data.status === "duplicate") {
+      resultDiv.innerHTML = "⚠ Already Checked-In";
+    } else if (data.status === "unauthorized") {
+      resultDiv.innerHTML = "❌ Wrong PIN";
+    } else {
+      resultDiv.innerHTML = "❌ Invite Not Found";
     }
-    else if (data.status === "duplicate") {
-      document.getElementById("result").innerHTML =
-        "⚠ Already Checked-In";
-    }
-    else if (data.status === "unauthorized") {
-      document.getElementById("result").innerHTML =
-        "❌ Wrong PIN";
-    }
-    else {
-      document.getElementById("result").innerHTML =
-        "❌ Invite Not Found";
-    }
-
   });
 }
 
+// Initialize scanner
 const html5QrCode = new Html5Qrcode("reader");
 
 Html5Qrcode.getCameras().then(devices => {
-  if (devices.length) {
+  if (devices && devices.length) {
+    // Try to select back camera first
+    let backCam = devices.find(cam => cam.label.toLowerCase().includes("back"));
+    if (!backCam) backCam = devices[0]; // fallback to first camera
+
     html5QrCode.start(
-      devices[0].id,
+      { deviceId: { exact: backCam.id } },
       { fps: 10, qrbox: 250 },
-      onScanSuccess
+      decodedText => onScanSuccess(decodedText),
+      errorMessage => { /* console.log(errorMessage); optional */ }
     );
+  } else {
+    alert("No camera found");
   }
+}).catch(err => {
+  console.error(err);
+  alert("Camera initialization failed: " + err);
 });
 
   document.getElementById("startScanBtn").addEventListener("click", function() {
@@ -79,7 +81,14 @@ Html5Qrcode.getCameras().then(devices => {
     alert("Enter PIN first");
     return;
   }
+document.getElementById("startScanBtn").addEventListener("click", function() {
+  // Hide PIN & button
+  document.getElementById("pin").style.display = "none";
+  document.getElementById("startScanBtn").style.display = "none";
 
+  // Start scanning
+  startScanner();
+});
   // Hide the PIN input and button after starting
   document.getElementById("pin").style.display = "none";
   document.getElementById("startScanBtn").style.display = "none";
